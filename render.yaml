@@ -1,0 +1,27 @@
+# Render Blueprint for the PDF renderer.
+#
+# Commit this at the ROOT of the repo (not inside weasyprint-service/), then in
+# Render: New > Blueprint, point it at the repo.
+#
+# Two fields below must be checked before you deploy:
+#
+#   region  must be the SAME region as your n8n service. Services only share a
+#           private network inside one region and one workspace, and the region
+#           cannot be changed after the service is created.
+#
+#   rootDir assumes the service lives at weasyprint-service/ in the repo. If you
+#           put it somewhere else, change this.
+
+services:
+  - type: pserv            # private service: no public URL at all
+    runtime: docker
+    name: weasyprint
+    region: frankfurt      # <-- MATCH YOUR n8n SERVICE'S REGION
+    plan: 1c-2g            # 0.5c-512mb also works; 2g gives headroom on long documents
+    rootDir: weasyprint-service
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: PDF_TOKEN
+        generateValue: true     # Render generates a strong value and shows it once
+      - key: BASE_CSS
+        value: /app/css/manifesto_print.css
