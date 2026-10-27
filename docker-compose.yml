@@ -1,0 +1,28 @@
+# Merge this into the compose file that already runs n8n, so both land on the
+# same network and n8n can reach the service by name.
+#
+# The port is NOT published to the host. Nothing outside the Docker network
+# should be able to POST arbitrary HTML to a renderer that fetches URLs.
+
+services:
+  weasyprint:
+    build: ./weasyprint-service
+    container_name: weasyprint
+    restart: unless-stopped
+    environment:
+      # Change this. The same value goes in the n8n HTTP Request node's
+      # X-Auth-Token header.
+      PDF_TOKEN: "change-me-to-a-long-random-string"
+      BASE_CSS: "/app/css/manifesto_print.css"
+    networks:
+      - n8n
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import urllib.request;urllib.request.urlopen('http://localhost:5000/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+networks:
+  n8n:
+    external: true      # or remove this and put both services in one file
