@@ -1,0 +1,288 @@
+/* manifesto_print.css
+   Print stylesheet for the People's Manifesto PDF, rendered by WeasyPrint.
+
+   Everything here is CSS Paged Media, which is the reason this is WeasyPrint
+   and not headless Chromium. Chromium ignores @page margin boxes, so page
+   numbers and running headers have to be faked with JavaScript and absolute
+   positioning. Here they are one line each, and target-counter gives the
+   contents page live page references that stay correct as the document grows. */
+
+/* ------------------------------------------------------------------ pages */
+
+@page {
+  size: A4;
+  margin: 24mm 18mm 20mm 18mm;
+
+  @top-left {
+    content: "The People's Manifesto";
+    font: 500 8pt/1 "Liberation Sans", sans-serif;
+    color: #8a8a8a;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding-bottom: 3mm;
+  }
+  @top-right {
+    content: string(region-name);     /* the region whose section we are in */
+    font: 400 8pt/1 "Liberation Sans", sans-serif;
+    color: #8a8a8a;
+    padding-bottom: 3mm;
+  }
+  @bottom-right {
+    content: counter(page) " of " counter(pages);
+    font: 400 8pt/1 "Liberation Sans", sans-serif;
+    color: #8a8a8a;
+    padding-top: 3mm;
+  }
+  @bottom-left {
+    content: "#WeThePeopleKE";
+    font: 500 8pt/1 "Liberation Sans", sans-serif;
+    color: #c8c8c8;
+    padding-top: 3mm;
+  }
+}
+
+/* The cover carries no furniture at all. */
+@page cover {
+  margin: 0;
+  @top-left { content: none; }
+  @top-right { content: none; }
+  @bottom-left { content: none; }
+  @bottom-right { content: none; }
+}
+
+/* Contents is numbered, but with no region in the header yet. */
+@page contents {
+  @top-right { content: none; }
+}
+
+/* ------------------------------------------------------------------- base */
+
+html { font-size: 11pt; }
+
+body {
+  font-family: "Liberation Serif", Georgia, serif;
+  line-height: 1.5;
+  color: #1c1c1c;
+  margin: 0;
+  hyphens: auto;
+  -weasy-hyphens: auto;
+}
+
+/* Kiswahili and English both hyphenate; declare the language on <html> so
+   WeasyPrint picks the right dictionary. */
+:lang(sw) { hyphens: auto; }
+
+p { margin: 0 0 3mm; orphans: 3; widows: 3; text-align: justify; }
+
+/* ------------------------------------------------------------------ cover */
+
+/* NOTE: WeasyPrint's flexbox is partial. `margin-top: auto` and `flex: 1` are
+   ignored, so anything that relies on flex to push content to the foot of a
+   page silently collapses upward. Absolute positioning is the reliable tool
+   here, and it is what the rest of this file uses. */
+.cover {
+  page: cover;
+  break-after: page;
+  position: relative;
+  height: 297mm;
+  padding: 40mm 24mm 24mm;
+  box-sizing: border-box;
+  background: #1c1c1c;
+  color: #ffffff;
+}
+.cover .mark {
+  font: 700 10pt/1 "Liberation Sans", sans-serif;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: #ffffff;
+  opacity: 0.55;
+}
+.cover h1 {
+  font: 700 40pt/1.05 "Liberation Sans", sans-serif;
+  margin: 14mm 0 0;
+  letter-spacing: -0.015em;
+  color: #ffffff;
+  bookmark-level: none;          /* keep the cover out of the PDF outline */
+}
+.cover .scope {
+  font: 400 15pt/1.3 "Liberation Serif", Georgia, serif;
+  margin: 6mm 0 0;
+  color: #ffffff;
+  opacity: 0.75;
+}
+.cover .meta {
+  position: absolute;
+  left: 24mm;
+  bottom: 28mm;
+  font: 400 9.5pt/1.7 "Liberation Sans", sans-serif;
+  color: #ffffff;
+  opacity: 0.6;
+}
+.cover .meta strong { font-weight: 600; opacity: 1; }
+
+/* --------------------------------------------------------------- contents */
+
+.contents { page: contents; break-after: page; }
+.contents h2 { bookmark-level: 1; }
+
+.contents ol { list-style: none; margin: 8mm 0 0; padding: 0; }
+/* Flush-right page numbers without flexbox: the row is the positioning
+   context and the number is pinned to its right edge. */
+.contents li {
+  position: relative;
+  padding: 1.6mm 14mm 1.6mm 0;
+  border-bottom: 0.3pt solid #e4e4e4;
+  font-family: "Liberation Sans", sans-serif;
+  font-size: 10pt;
+}
+.contents li .fill { display: none; }
+.contents a { color: #1c1c1c; text-decoration: none; }
+
+/* The page number is resolved at layout time from the anchor's real page.
+   Add a region and the numbers below it all move by themselves. */
+.contents a::after {
+  content: target-counter(attr(href), page);
+  position: absolute;
+  right: 0;
+  font-variant-numeric: tabular-nums;
+  color: #6a6a6a;
+}
+.contents li.sub { padding-left: 7mm; font-size: 9.5pt; color: #4a4a4a; }
+
+/* -------------------------------------------------------------- headings */
+
+h1, h2, h3, h4 {
+  font-family: "Liberation Sans", sans-serif;
+  font-weight: 700;
+  color: #1c1c1c;
+  break-after: avoid;            /* never a heading alone at the foot of a page */
+  margin: 0;
+}
+
+h2 {
+  font-size: 19pt;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  margin: 0 0 1mm;
+  bookmark-level: 1;
+}
+h3 {
+  font-size: 12.5pt;
+  margin: 7mm 0 2mm;
+  bookmark-level: 2;
+}
+h4 {
+  font-size: 10.5pt;
+  margin: 5mm 0 1.5mm;
+  bookmark-level: 3;
+}
+
+/* ---------------------------------------------------------------- region */
+
+/* Each region starts its own page, and announces itself into the running
+   header for every page it spans. */
+.region { break-before: page; }
+
+/* string-set must sit on the HEADING, not the section. content(text) takes the
+   whole element's text, so putting it on .region stuffs the entire region into
+   the header box and silently clips it. */
+.region > h2 { string-set: region-name content(text); }
+
+.region > .scope {
+  font: 400 9pt/1.4 "Liberation Sans", sans-serif;
+  color: #7a7a7a;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin: 0 0 6mm;
+}
+
+/* The standfirst: how many people, stated as people. */
+.tally {
+  font-family: "Liberation Sans", sans-serif;
+  font-size: 9.5pt;
+  line-height: 1.6;
+  color: #3a3a3a;
+  background: #f6f6f4;
+  border-left: 2.5pt solid #1c1c1c;
+  padding: 4mm 5mm;
+  margin: 0 0 7mm;
+  break-inside: avoid;
+}
+.tally strong { font-weight: 700; font-variant-numeric: tabular-nums; }
+.tally .note { display: block; margin-top: 1.5mm; color: #7a7a7a; font-size: 8.5pt; }
+
+/* --------------------------------------------------------------- demands */
+
+.demand {
+  break-inside: avoid;           /* a demand is never split across a page */
+  margin: 0 0 6mm;
+  padding-left: 9mm;
+  position: relative;
+}
+.demand .rank {
+  position: absolute;
+  left: 0;
+  top: 0.4mm;
+  font: 700 13pt/1 "Liberation Sans", sans-serif;
+  color: #c0c0c0;
+  font-variant-numeric: tabular-nums;
+}
+.demand h4 { margin: 0 0 1.5mm; }
+.demand .support {
+  font: 400 8.5pt/1.4 "Liberation Sans", sans-serif;
+  color: #7a7a7a;
+  margin: 1.5mm 0 0;
+}
+.demand blockquote {
+  margin: 2.5mm 0 0;
+  padding: 0 0 0 4mm;
+  border-left: 1.5pt solid #dcdcdc;
+  font-size: 10pt;
+  color: #4a4a4a;
+  font-style: italic;
+}
+.demand blockquote cite {
+  display: block;
+  margin-top: 1mm;
+  font: 400 8pt/1.3 "Liberation Sans", sans-serif;
+  font-style: normal;
+  color: #9a9a9a;
+}
+
+/* ----------------------------------------------------------------- table */
+
+table { width: 100%; border-collapse: collapse; margin: 4mm 0 7mm; font-size: 9.5pt; }
+thead { display: table-header-group; }      /* header repeats on every page */
+tr { break-inside: avoid; }
+th {
+  font: 600 8pt/1.2 "Liberation Sans", sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #7a7a7a;
+  text-align: left;
+  padding: 0 3mm 2mm 0;
+  border-bottom: 0.8pt solid #1c1c1c;
+}
+td {
+  padding: 2.2mm 3mm 2.2mm 0;
+  border-bottom: 0.3pt solid #e8e8e8;
+  vertical-align: top;
+}
+td.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* ---------------------------------------------------------------- method */
+
+.method {
+  break-before: page;
+  font-size: 9.5pt;
+  color: #4a4a4a;
+}
+/* A string-set persists until something overwrites it, so without this the
+   method page still carries the last region's name in its header. */
+.method > h2 { color: #1c1c1c; string-set: region-name ""; }
+.method dt { font: 600 9.5pt/1.4 "Liberation Sans", sans-serif; color: #1c1c1c; margin-top: 4mm; }
+.method dd { margin: 0.8mm 0 0; }
+
+/* Backgrounds and borders print by default in WeasyPrint. This only matters
+   if something downstream re-renders the HTML in a browser. */
+* { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
